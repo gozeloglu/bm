@@ -6,6 +6,7 @@ bm --list # list all of the bookmarked links
 bm --delete <ith bookmark> # delete the ith bookmarked
 bm --update i <new link>  # update the ith bookmark with new link
 bm --open i # open given link id in default browser
+bm --export <directory> # exports links to given directory
 bm --help # prints usage
 bm --version  # prints version 
 ```

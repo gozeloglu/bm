@@ -43,3 +43,9 @@ bm --update 3 https://github.com  # updates the 3rd link with new one, github.co
 ```shell
 bm --open 3 # opens 3rd link on the default browser
 ```
+
+### Export links
+
+```shell
+bm --export ~/links/  # exports links to ~/links directory as .db 
+```

@@ -6,16 +6,20 @@ import (
 	"fmt"
 	"github.com/enescakir/emoji"
 	"github.com/gozeloglu/bm-go/internal/database"
+	"io"
+	"log"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
 
 const (
-	filename = "bm.db"
-	logLevel = slog.LevelError
+	filename    = "bm.db"
+	logFilename = "bm.log"
+	logLevel    = slog.LevelError
 )
 
 var (
@@ -24,10 +28,23 @@ var (
 	del    = flag.Int64("delete", 0, "Delete existing link with given link ID.")
 	update = flag.Int64("update", 0, "Update existing link with given link ID.")
 	open   = flag.Int64("open", 0, "Open existing link with given link ID.")
+	export = flag.String("export", "", "Export existing links.")
 )
 
 func main() {
-	logFile, err := os.OpenFile("bm.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	logDir := filepath.Join(homeDir, "bm", "logs")
+	// Ensure the log directory exists
+	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
+		log.Fatalf("failed to create log directory: %v", err)
+	}
+
+	// Open the log file in the specified directory
+	logFilePath := filepath.Join(logDir, logFilename)
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -119,6 +136,46 @@ func main() {
 			return
 		}
 		fmt.Printf("%v opened link for #%v(%s)\n", emoji.CheckMarkButton, id, link)
+		return
+	}
+	if *export != "" {
+		path := *export
+
+		// Check if the provided path is a directory
+		fileInfo, err := os.Stat(path)
+		if err == nil && fileInfo.IsDir() {
+			// If it's a directory, append the default filename
+			path = filepath.Join(path, "bm.db")
+		} else if err != nil && !os.IsNotExist(err) {
+			// Handle unexpected errors during stat
+			logger.ErrorContext(ctx, "failed to access destination path", "path", path, "error", err.Error())
+			fmt.Printf("%v failed to export file: invalid destination path\n", emoji.CrossMarkButton)
+			return
+		}
+
+		dbFile, err := os.Open("./bm.db")
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to open database file", "error", err.Error())
+			fmt.Printf("%v failed to export file\n", emoji.CrossMarkButton)
+			return
+		}
+		defer dbFile.Close()
+
+		destFile, err := os.Create(path)
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to export", "file", path)
+			fmt.Printf("%v failed to export file\n", emoji.CrossMarkButton)
+			return
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, dbFile)
+		if err != nil {
+			logger.ErrorContext(ctx, "failed to export file", "file", path)
+			fmt.Printf("%v failed to export file\n", emoji.CrossMarkButton)
+			return
+		}
+		fmt.Printf("%v exported file to %s\n", emoji.CheckMarkButton, path)
 		return
 	}
 
