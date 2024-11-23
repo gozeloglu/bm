@@ -57,7 +57,11 @@ func main() {
 	}))
 
 	db := database.NewSQLite3(database.WithLogger(logger))
-	err = db.Open(ctx, filename)
+	dbDir := filepath.Join(homeDir, "bm", "db")
+	if err := os.MkdirAll(dbDir, os.ModePerm); err != nil {
+		log.Fatalf("failed to create log directory: %v", err)
+	}
+	err = db.Open(ctx, filepath.Join(dbDir, filename))
 	if err != nil {
 		logger.ErrorContext(ctx, "failed to open database:", err.Error())
 		return
