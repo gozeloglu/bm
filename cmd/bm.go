@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 const (
@@ -127,6 +128,10 @@ func main() {
 
 // openBrowser opens the given url in default browser.
 func openBrowser(url string) bool {
+	if !strings.HasPrefix(url, "https://") || !strings.HasPrefix(url, "http://") {
+		url = "https://" + url
+	}
+	fmt.Println(url)
 	var args []string
 	switch runtime.GOOS {
 	case "darwin":
