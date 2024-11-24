@@ -49,3 +49,9 @@ bm --open 3 # opens 3rd link on the default browser
 ```shell
 bm --export ~/links/  # exports links to ~/links directory as .db 
 ```
+
+### Version
+
+```shell
+bm --version
+```
