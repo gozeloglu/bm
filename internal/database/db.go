@@ -1,10 +1,13 @@
 package database
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 type Storage interface {
 	// Save saves the link to database.
-	Save(ctx context.Context, link string) (int64, error)
+	Save(ctx context.Context, link string, name string) (int64, error)
 
 	// List returns the links in map. The key is number and the value is the link.
 	List(ctx context.Context) []Record
@@ -16,4 +19,6 @@ type Storage interface {
 	UpdateByID(ctx context.Context, id int64, link string) (bool, error)
 
 	LinkByID(ctx context.Context, id int64) (string, error)
+
+	io.Closer
 }

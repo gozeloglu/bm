@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	_ "github.com/mattn/go-sqlite3"
 	"log/slog"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var errCreateTable = errors.New("error while creating table")
@@ -54,8 +55,8 @@ func (s *SQLite3) Close() error {
 	return s.db.Close()
 }
 
-func (s *SQLite3) Save(ctx context.Context, link string) (int64, error) {
-	res, err := s.db.ExecContext(ctx, "INSERT INTO links (link) VALUES (?)", link)
+func (s *SQLite3) Save(ctx context.Context, link string, name string) (int64, error) {
+	res, err := s.db.ExecContext(ctx, "INSERT INTO links (link, name) VALUES (?, ?)", link, name)
 	if err != nil {
 		return -1, err
 	}
@@ -68,7 +69,7 @@ func (s *SQLite3) Save(ctx context.Context, link string) (int64, error) {
 }
 
 func (s *SQLite3) List(ctx context.Context) []Record {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, link FROM links")
+	rows, err := s.db.QueryContext(ctx, "SELECT id, link, name FROM links")
 	if err != nil {
 		return nil
 	}
@@ -79,11 +80,12 @@ func (s *SQLite3) List(ctx context.Context) []Record {
 	for rows.Next() {
 		var id int64
 		var link string
-		if err := rows.Scan(&id, &link); err != nil {
+		var name string
+		if err := rows.Scan(&id, &link, &name); err != nil {
 			s.logger.ErrorContext(ctx, "error scanning row")
 			continue
 		}
-		records = append(records, Record{ID: id, Link: link})
+		records = append(records, Record{ID: id, Link: link, Name: name})
 	}
 
 	return records
@@ -139,8 +141,8 @@ func (s *SQLite3) LinkByID(ctx context.Context, id int64) (string, error) {
 func (s *SQLite3) createTable(ctx context.Context) error {
 	createTableQuery := `CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    link TEXT NOT NULL
+    link TEXT NOT NULL,
+	name TEXT
                                  );`
 
 	_, err := s.db.ExecContext(ctx, createTableQuery)

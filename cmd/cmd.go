@@ -4,34 +4,29 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/gozeloglu/bm-go/internal/database"
+	"github.com/gozeloglu/bm-go/tui"
+	lst "github.com/gozeloglu/bm-go/tui/list"
+	"github.com/gozeloglu/bm-go/tui/textinput"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 
-	"github.com/gozeloglu/bm-go/internal/database"
-	"github.com/gozeloglu/bm-go/internal/file"
-
 	"github.com/enescakir/emoji"
 )
 
 const (
-	filename    = "bm.db"
-	logFilename = "bm.log"
-	bmDir       = ".bm"
-	bmLogDir    = "log"
-	dbDir       = "db"
-	logLevel    = slog.LevelError
-	appVersion  = "0.1.0"
+	appVersion = "0.1.0"
 )
 
 var (
-	save    = flag.String("save", "", "Save new link to bm.")
+	save    = flag.Bool("save", false, "Save new link to bm.")
 	list    = flag.Bool("list", false, "List all links.")
-	del     = flag.Int64("delete", 0, "Delete existing link with given link ID.")
+	del     = flag.Bool("delete", false, "Delete existing link with given link ID.")
 	update  = flag.Int64("update", 0, "Update existing link with given link ID.")
 	open    = flag.Int64("open", 0, "Open existing link with given link ID.")
 	export  = flag.String("export", "", "Export existing links.")
@@ -44,100 +39,52 @@ type App struct {
 }
 
 func Run() {
-	f := file.New()
-	logDir, err := f.CreateDir(bmDir, bmLogDir)
-	if err != nil {
-		log.Fatalln("Failed to run app.")
-	}
-
-	logFile, err := f.OpenFile(logDir, logFilename)
-	if err != nil {
-		log.Fatalln("Failed to run app.")
-	}
-	defer f.Close()
-
 	flag.Parse()
-	ctx := context.Background()
-	logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
-		Level: logLevel,
-	}))
-
-	db := database.NewSQLite3(database.WithLogger(logger))
-	bmDBDir, err := f.CreateDir(bmDir, dbDir)
-	if err != nil {
-		log.Fatalln("Failed to run app.")
-	}
-
-	err = db.Open(ctx, filepath.Join(bmDBDir, filename))
-	if err != nil {
-		logger.ErrorContext(ctx, "failed to open database:", err.Error())
-		return
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			logger.ErrorContext(ctx, "failed to close database:", err.Error())
-			return
+	app := tui.NewApp()
+	deletionEnabled := false
+	if *save {
+		if _, err := tea.NewProgram(textinput.New(app)).Run(); err != nil {
+			app.Logger.Error("failed to run save program:", err.Error())
+			os.Exit(1)
 		}
-		logger.InfoContext(ctx, "database closed successfully")
-	}()
-	logger.InfoContext(ctx, "created connection to database")
-
-	app := &App{
-		db:     db,
-		logger: logger,
-	}
-	if *save != "" {
-		app.Save(ctx, *save)
 		return
 	}
 	if *list {
-		app.List(ctx)
+		deletionEnabled = false
+		if _, err := tea.NewProgram(lst.New(app, deletionEnabled), tea.WithAltScreen()).Run(); err != nil {
+			app.Logger.Error("failed to run save program:", err.Error())
+			os.Exit(1)
+		}
 		return
 	}
-	if *del > 0 {
-		app.Del(ctx, *del)
+	if *del {
+		deletionEnabled = true
+		fmt.Println(deletionEnabled)
+		if _, err := tea.NewProgram(lst.New(app, deletionEnabled), tea.WithAltScreen()).Run(); err != nil {
+			app.Logger.Error("failed to run save program:", err.Error())
+			os.Exit(1)
+		}
 		return
 	}
 	if *update > 0 {
-		app.Update(ctx, *update)
+		//app.Update(ctx, *update)
 		return
 	}
 	if *open > 0 {
-		app.Open(ctx, *open)
+		//app.Open(ctx, *open)
 		return
 	}
 	if *export != "" {
-		app.Export(ctx, *export)
+		//app.Export(ctx, *export)
 		return
 	}
 	if *version {
-		app.Version(ctx)
+		//app.Version(ctx)
 		return
 	}
 
 	fmt.Printf("%v please provide correct arguments id\n", emoji.CrossMarkButton)
 	fmt.Printf("For more information, type bm --help\n")
-}
-
-func (a *App) Save(ctx context.Context, link string) {
-	id, err := a.db.Save(ctx, link)
-	if err != nil {
-		a.logger.ErrorContext(ctx, "failed to save link: %+w", err)
-		return
-	}
-	a.logger.InfoContext(ctx, "saved link with", "id", id)
-	fmt.Printf("%v saved %s with id: %v\n", emoji.CheckMarkButton, link, id)
-	return
-}
-
-func (a *App) List(ctx context.Context) {
-	links := a.db.List(ctx)
-	fmt.Printf("ID\t\tLink\n")
-	fmt.Printf("----\t\t-------------\n")
-	for _, l := range links {
-		fmt.Printf("%d\t\t%s\n", l.ID, l.Link)
-	}
-	return
 }
 
 func (a *App) Del(ctx context.Context, id int64) {
@@ -177,11 +124,7 @@ func (a *App) Open(ctx context.Context, id int64) {
 		fmt.Printf("%v failed to open link for #%d\n", emoji.CrossMarkButton, id)
 		return
 	}
-	//if strings.Trim(link, " ") == "" {
-	//	a.logger.ErrorContext(ctx, "failed to open link for #%d\n", id)
-	//	fmt.Printf("%v invalid id #%d\n", emoji.CrossMarkButton, id)
-	//	return
-	//}
+
 	ok := openBrowser(link)
 	if !ok {
 		a.logger.ErrorContext(ctx, "failed to open link for", "id", id, "link", link)
