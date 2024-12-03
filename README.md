@@ -10,6 +10,10 @@ You can type the following command.
 go install github.com/gozeloglu/bm-go@latest
 ```
 
+```shell
+go build cmd/* &&  go install cmd/bm.go cmd/cmd.go
+```
+
 ## Usage
 
 Currently, limited commands are provided.
