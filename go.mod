@@ -1,4 +1,4 @@
-module github.com/gozeloglu/bm-go
+module github.com/gozeloglu/bm
 
 go 1.23.0
 

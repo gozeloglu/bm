@@ -3,7 +3,7 @@ package textinput
 import (
 	"context"
 	"fmt"
-	"github.com/gozeloglu/bm-go/tui"
+	"github.com/gozeloglu/bm/tui"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"

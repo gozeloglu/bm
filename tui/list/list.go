@@ -2,8 +2,8 @@ package list
 
 import (
 	"context"
-	"github.com/gozeloglu/bm-go/internal/database"
-	"github.com/gozeloglu/bm-go/tui"
+	"github.com/gozeloglu/bm/internal/database"
+	"github.com/gozeloglu/bm/tui"
 	"os/exec"
 	"runtime"
 	"strings"

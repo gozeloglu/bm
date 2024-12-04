@@ -1,4 +1,4 @@
-# bm-go
+# bm
 
 New version of the [bm.sh](https://github.com/gozeloglu/bm.sh) tool written in Go.
 
