@@ -1,6 +1,6 @@
 # bm-go
 
-New version of the [bm](https://github.com/gozeloglu/bm) tool written in Go.
+New version of the [bm.sh](https://github.com/gozeloglu/bm.sh) tool written in Go.
 
 ## Installation
 
