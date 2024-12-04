@@ -7,7 +7,7 @@ New version of the [bm](https://github.com/gozeloglu/bm) tool written in Go.
 You can type the following command.
 
 ```shell
-go install github.com/gozeloglu/bm-go@latest
+go install github.com/gozeloglu/bm@latest
 ```
 
 ```shell
