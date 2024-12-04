@@ -33,7 +33,7 @@ type Model struct {
 
 func New(app *tui.App) Model {
 	m := Model{
-		inputs: make([]textinput.Model, 2),
+		inputs: make([]textinput.Model, 3),
 		app:    app,
 	}
 
@@ -52,6 +52,9 @@ func New(app *tui.App) Model {
 		case 1:
 			t.Placeholder = "Bookmark Name"
 			t.CharLimit = 64
+		case 2:
+			t.Placeholder = "Category"
+			t.CharLimit = 32
 		}
 
 		m.inputs[i] = t
@@ -93,12 +96,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if s == "enter" && m.focusIndex == len(m.inputs) {
 				link := m.inputs[0].Value()
 				bmName := m.inputs[1].Value()
-				m.app.Logger.Info("calling save")
-				m.app.Save(context.Background(), link, bmName)
-				m.app.Logger.Info("saved to db")
-				m.app.Logger.Info(link, bmName)
+				categoryName := m.inputs[2].Value()
+				m.app.Save(context.Background(), link, bmName, categoryName)
 				m.app.Close()
-
 				return m, tea.Quit
 			}
 
@@ -128,9 +128,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs[i].Blur()
 				m.inputs[i].PromptStyle = noStyle
 				m.inputs[i].TextStyle = noStyle
-				if i == 0 {
-					//openBrowser(m.inputs[i].Value())
-				}
 			}
 
 			return m, tea.Batch(cmds...)
@@ -168,9 +165,6 @@ func (m Model) View() string {
 	button := &blurredButton
 	if m.focusIndex == len(m.inputs) {
 		button = &focusedButton
-		//link := m.inputs[0].Value()
-		//bmName := m.inputs[1].Value()
-		//m.app.Save(context.Background(), link, bmName)
 	}
 	fmt.Fprintf(&b, "\n\n%s\n\n", *button)
 

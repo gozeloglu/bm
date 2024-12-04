@@ -6,6 +6,7 @@ import (
 	"github.com/gozeloglu/bm-go/tui"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,13 +16,23 @@ import (
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
 
 type item struct {
-	id         int64
-	link, name string
+	id       int64
+	link     string
+	name     string
+	category string
 }
 
-func (i item) Title() string       { return i.name }
+func (i item) Title() string {
+	title := strings.Builder{}
+	if len(i.category) != 0 {
+		title.WriteString(i.category)
+		title.WriteString(" | ")
+	}
+	title.WriteString(i.name)
+	return title.String()
+}
 func (i item) Description() string { return i.link }
-func (i item) FilterValue() string { return i.link + i.name }
+func (i item) FilterValue() string { return i.category + i.link + i.name }
 func (i item) ID() int64           { return i.id }
 
 type Model struct {
@@ -42,9 +53,10 @@ func New(app *tui.App, deletionEnabled bool) Model {
 	items := make([]list.Item, len(bmList))
 	for i, it := range bmList {
 		items[i] = item{
-			id:   it.ID,
-			link: it.Link,
-			name: it.Name,
+			id:       it.ID,
+			link:     it.Link,
+			name:     it.Name,
+			category: it.CategoryName,
 		}
 	}
 	m := Model{

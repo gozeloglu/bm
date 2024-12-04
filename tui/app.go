@@ -75,8 +75,8 @@ func (a *App) Close() error {
 	return nil
 }
 
-func (a *App) Save(ctx context.Context, link string, name string) {
-	id, err := a.db.Save(ctx, link, name)
+func (a *App) Save(ctx context.Context, link string, name string, categoryName string) {
+	id, err := a.db.Save(ctx, link, name, categoryName)
 	if err != nil {
 		a.Logger.Error("failed to save link: %+w", err)
 		return

@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -44,7 +46,7 @@ func (s *SQLite3) Open(ctx context.Context, filename string) error {
 	}
 	s.db = db
 
-	err = s.createTable(ctx)
+	err = s.createTables(ctx)
 	if err != nil {
 		return err
 	}
@@ -55,9 +57,35 @@ func (s *SQLite3) Close() error {
 	return s.db.Close()
 }
 
-func (s *SQLite3) Save(ctx context.Context, link string, name string) (int64, error) {
-	res, err := s.db.ExecContext(ctx, "INSERT INTO links (link, name) VALUES (?, ?)", link, name)
+func (s *SQLite3) Save(ctx context.Context, link string, name string, categoryName string) (int64, error) {
+	// insert categoryName to the categories table
+	insertCategoryQuery := `
+INSERT OR IGNORE INTO categories (name)
+VALUES (?);
+`
+	categoryName = strings.TrimSpace(categoryName)
+	categoryName = strings.ToUpper(categoryName)
+	res, err := s.db.ExecContext(ctx, insertCategoryQuery, categoryName)
 	if err != nil {
+		fmt.Println("error happened while inserting to categories table:", err)
+		return -1, err
+	}
+	categoryID, _ := res.LastInsertId()
+
+	// If the category name already exists.
+	if categoryID == 0 {
+		categoryID = s.fetchCategoryID(ctx, categoryName)
+	}
+
+	// insert link, name, and category id to links table
+	insertLinkQuery := `
+INSERT INTO links (link, name, category_id) VALUES (?, ?, ?)
+`
+	link = strings.TrimSpace(link)
+	name = strings.TrimSpace(name)
+	res, err = s.db.ExecContext(ctx, insertLinkQuery, link, name, categoryID)
+	if err != nil {
+		fmt.Println("error happened while inserting to links table")
 		return -1, err
 	}
 	linkID, err := res.LastInsertId()
@@ -69,7 +97,13 @@ func (s *SQLite3) Save(ctx context.Context, link string, name string) (int64, er
 }
 
 func (s *SQLite3) List(ctx context.Context) []Record {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, link, name FROM links")
+	query := `
+	SELECT links.id, links.link, links.name, categories.name
+	FROM links
+	INNER JOIN categories
+	ON links.category_id = categories.id;
+	`
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil
 	}
@@ -81,11 +115,12 @@ func (s *SQLite3) List(ctx context.Context) []Record {
 		var id int64
 		var link string
 		var name string
-		if err := rows.Scan(&id, &link, &name); err != nil {
+		var categoryName string
+		if err := rows.Scan(&id, &link, &name, &categoryName); err != nil {
 			s.logger.ErrorContext(ctx, "error scanning row")
 			continue
 		}
-		records = append(records, Record{ID: id, Link: link, Name: name})
+		records = append(records, Record{ID: id, Link: link, Name: name, CategoryName: categoryName})
 	}
 
 	return records
@@ -138,17 +173,35 @@ func (s *SQLite3) LinkByID(ctx context.Context, id int64) (string, error) {
 	return link, nil
 }
 
-func (s *SQLite3) createTable(ctx context.Context) error {
-	createTableQuery := `CREATE TABLE IF NOT EXISTS links (
+func (s *SQLite3) createTables(ctx context.Context) error {
+	createLinksTableQuery := `CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     link TEXT NOT NULL,
-	name TEXT
+	name TEXT,
+	category_id INTEGER
                                  );`
 
-	_, err := s.db.ExecContext(ctx, createTableQuery)
+	createCategoryTableQuery := `CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE
+                                      );`
+
+	_, err := s.db.ExecContext(ctx, createLinksTableQuery)
+	if err != nil {
+		return errCreateTable
+	}
+
+	_, err = s.db.ExecContext(ctx, createCategoryTableQuery)
 	if err != nil {
 		return errCreateTable
 	}
 
 	return nil
+}
+
+func (s *SQLite3) fetchCategoryID(ctx context.Context, categoryName string) int64 {
+	row := s.db.QueryRowContext(ctx, "SELECT id FROM categories WHERE name = ?", categoryName)
+	var id int64
+	_ = row.Scan(&id)
+	return id
 }
