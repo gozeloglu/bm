@@ -1,7 +1,6 @@
 package list
 
 import (
-	"context"
 	"github.com/gozeloglu/bm/internal/database"
 	"github.com/gozeloglu/bm/tui"
 	"os/exec"
@@ -44,10 +43,8 @@ type Model struct {
 }
 
 func New(app *tui.App, deletionEnabled bool) Model {
-	ctx := context.Background()
-
 	// fetch the all bookmarks
-	bmList := app.List(ctx)
+	bmList := app.List(app.Ctx)
 
 	// convert records to []list.Item
 	items := make([]list.Item, len(bmList))
@@ -75,20 +72,19 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	//fmt.Println(m.deletionEnabled)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "ctrl+c" {
+		if msg.String() == "ctrl+c" || msg.String() == "q" || msg.String() == tea.KeyEsc.String() {
 			return m, tea.Quit
 		}
-		if msg.String() == "enter" && !m.deletionEnabled {
+		if msg.String() == tea.KeyEnter.String() && !m.deletionEnabled {
 			openBrowser(m.list.SelectedItem().(list.DefaultItem).Description())
 		}
 		if msg.String() == tea.KeyBackspace.String() && m.deletionEnabled {
 			if len(m.bmList) > 0 {
 				idx := m.list.Index()
 				id := m.bmList[idx].ID
-				ok := m.app.Delete(context.Background(), id)
+				ok := m.app.Delete(m.app.Ctx, id)
 				if ok {
 					m.list.RemoveItem(m.list.Index())
 					m.bmList = append(m.bmList[:idx], m.bmList[idx+1:]...)

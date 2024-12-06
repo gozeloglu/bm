@@ -25,6 +25,8 @@ var (
 func Run() {
 	flag.Parse()
 	app := tui.NewApp()
+	defer app.Close()
+
 	if *save {
 		saveFlag(app)
 		return

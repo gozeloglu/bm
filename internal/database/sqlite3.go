@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strings"
 
@@ -38,7 +37,7 @@ func WithLogger(logger *slog.Logger) OptFunc {
 
 // Open opens database connections.
 func (s *SQLite3) Open(ctx context.Context, filename string) error {
-	s.logger.InfoContext(ctx, "opening database")
+	s.logger.Info("opening database")
 	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		s.logger.Info("failed to open database ---", "filename", err.Error())
@@ -53,10 +52,13 @@ func (s *SQLite3) Open(ctx context.Context, filename string) error {
 	return nil
 }
 
+// Close closes the database. It is important to call before terminating the
+// application.
 func (s *SQLite3) Close() error {
 	return s.db.Close()
 }
 
+// Save inserts the given link, name, and categories to links and categories tables.
 func (s *SQLite3) Save(ctx context.Context, link string, name string, categoryName string) (int64, error) {
 	// insert categoryName to the categories table
 	insertCategoryQuery := `
@@ -67,7 +69,7 @@ VALUES (?);
 	categoryName = strings.ToUpper(categoryName)
 	res, err := s.db.ExecContext(ctx, insertCategoryQuery, categoryName)
 	if err != nil {
-		fmt.Println("error happened while inserting to categories table:", err)
+		s.logger.Error("failed to insert category", "category", categoryName, "error", err.Error())
 		return -1, err
 	}
 	categoryID, _ := res.LastInsertId()
@@ -85,18 +87,20 @@ INSERT INTO links (link, name, category_id) VALUES (?, ?, ?)
 	name = strings.TrimSpace(name)
 	res, err = s.db.ExecContext(ctx, insertLinkQuery, link, name, categoryID)
 	if err != nil {
-		fmt.Println("error happened while inserting to links table")
+		s.logger.Error("failed to insert link", "link", link, "error", err.Error())
 		return -1, err
 	}
 	linkID, err := res.LastInsertId()
 	if err != nil {
+		s.logger.Error("failed to insert link", "link", link, "error", err.Error())
 		return -1, err
 	}
 
 	return linkID, nil
 }
 
-func (s *SQLite3) List(ctx context.Context) []Record {
+// List fetches the Record and returns slice of Record.
+func (s *SQLite3) List(ctx context.Context) ([]Record, error) {
 	query := `
 	SELECT links.id, links.link, links.name, categories.name
 	FROM links
@@ -104,12 +108,12 @@ func (s *SQLite3) List(ctx context.Context) []Record {
 	ON links.category_id = categories.id;
 	`
 	rows, err := s.db.QueryContext(ctx, query)
+	records := make([]Record, 0)
 	if err != nil {
-		return nil
+		s.logger.Error("failed to fetch record", "error", err.Error())
+		return records, err
 	}
 	defer rows.Close()
-
-	records := make([]Record, 0)
 
 	for rows.Next() {
 		var id int64
@@ -117,25 +121,24 @@ func (s *SQLite3) List(ctx context.Context) []Record {
 		var name string
 		var categoryName string
 		if err := rows.Scan(&id, &link, &name, &categoryName); err != nil {
-			s.logger.ErrorContext(ctx, "error scanning row")
+			s.logger.Error("error scanning row")
 			continue
 		}
 		records = append(records, Record{ID: id, Link: link, Name: name, CategoryName: categoryName})
 	}
 
-	return records
+	return records, nil
 }
 
+// DeleteByID deletes the given id from the links table.
 func (s *SQLite3) DeleteByID(ctx context.Context, id int64) (bool, error) {
 	res, err := s.db.ExecContext(ctx, "DELETE FROM links WHERE id=(?)", id)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "error deleting link id:", id)
 		return false, err
 
 	}
 	n, _ := res.RowsAffected()
 	if n > 0 {
-		s.logger.InfoContext(ctx, "deleted link id:", id)
 		return true, nil
 	}
 	return false, nil
@@ -173,6 +176,7 @@ func (s *SQLite3) LinkByID(ctx context.Context, id int64) (string, error) {
 	return link, nil
 }
 
+// createTables creates the links and categories tables if they do not exist.
 func (s *SQLite3) createTables(ctx context.Context) error {
 	createLinksTableQuery := `CREATE TABLE IF NOT EXISTS links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -188,17 +192,20 @@ func (s *SQLite3) createTables(ctx context.Context) error {
 
 	_, err := s.db.ExecContext(ctx, createLinksTableQuery)
 	if err != nil {
+		s.logger.ErrorContext(ctx, "error while creating links table", "error", err.Error())
 		return errCreateTable
 	}
 
 	_, err = s.db.ExecContext(ctx, createCategoryTableQuery)
 	if err != nil {
+		s.logger.ErrorContext(ctx, "error while creating categories table", "error", err.Error())
 		return errCreateTable
 	}
 
 	return nil
 }
 
+// fetchCategoryID fetches and returns given categoryName's id.
 func (s *SQLite3) fetchCategoryID(ctx context.Context, categoryName string) int64 {
 	row := s.db.QueryRowContext(ctx, "SELECT id FROM categories WHERE name = ?", categoryName)
 	var id int64

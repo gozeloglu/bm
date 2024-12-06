@@ -21,9 +21,10 @@ const (
 )
 
 type App struct {
-	Logger *slog.Logger
-	db     database.Storage
-	ctx    context.Context
+	Logger     *slog.Logger
+	Ctx        context.Context
+	db         database.Storage
+	loggerFile *file.File
 }
 
 func NewApp() *App {
@@ -37,7 +38,6 @@ func NewApp() *App {
 	if err != nil {
 		log.Fatalln("Failed to run app.")
 	}
-	defer f.Close()
 
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
@@ -52,21 +52,26 @@ func NewApp() *App {
 
 	err = db.Open(ctx, filepath.Join(bmDBDir, filename))
 	if err != nil {
-		logger.ErrorContext(ctx, "failed to open database:", err.Error())
+		logger.Error("failed to open database:", "error", err.Error())
 		return nil
 	}
-	logger.InfoContext(ctx, "created connection to database")
+	logger.Info("created connection to database")
 
 	return &App{
-		Logger: logger,
-		db:     db,
-		ctx:    ctx,
+		Logger:     logger,
+		Ctx:        ctx,
+		db:         db,
+		loggerFile: f,
 	}
 }
 
+// Close closes the application by closing the logger file and database.
 func (a *App) Close() error {
+	// close log file after closing the database
+	defer a.loggerFile.Close()
+
 	if err := a.db.Close(); err != nil {
-		a.Logger.Error("failed to close database:", err.Error())
+		a.Logger.Error("failed to close database", "error", err.Error())
 		return err
 	}
 
@@ -74,6 +79,7 @@ func (a *App) Close() error {
 	return nil
 }
 
+// Save saves the link, name, and category.
 func (a *App) Save(ctx context.Context, link string, name string, categoryName string) {
 	id, err := a.db.Save(ctx, link, name, categoryName)
 	if err != nil {
@@ -85,15 +91,23 @@ func (a *App) Save(ctx context.Context, link string, name string, categoryName s
 	return
 }
 
+// List returns list of database.Record.
 func (a *App) List(ctx context.Context) []database.Record {
-	return a.db.List(ctx)
+	records, err := a.db.List(ctx)
+	if err != nil {
+		a.Logger.Error("failed to fetch records", "error", err.Error())
+		return records
+	}
+	return records
 }
 
+// Delete deletes the link by using the given id. It returns result as bool.
 func (a *App) Delete(ctx context.Context, id int64) bool {
 	ok, err := a.db.DeleteByID(ctx, id)
 	if err != nil || !ok {
-		a.Logger.Error("failed to delete link: %+w", err.Error())
+		a.Logger.Error("failed to delete link", "error", err)
 		return false
 	}
+	a.Logger.Info("deleted link", "id", id)
 	return true
 }

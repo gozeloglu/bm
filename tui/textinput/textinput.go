@@ -1,7 +1,6 @@
 package textinput
 
 import (
-	"context"
 	"fmt"
 	"github.com/gozeloglu/bm/tui"
 	"strings"
@@ -72,7 +71,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
-			m.app.Close()
 			return m, tea.Quit
 
 		// Change cursor mode
@@ -97,8 +95,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				link := m.inputs[0].Value()
 				bmName := m.inputs[1].Value()
 				categoryName := m.inputs[2].Value()
-				m.app.Save(context.Background(), link, bmName, categoryName)
-				m.app.Close()
+				m.app.Save(m.app.Ctx, link, bmName, categoryName)
 				return m, tea.Quit
 			}
 
