@@ -15,10 +15,5 @@ type Storage interface {
 	// DeleteByID deletes the links by given IDs.
 	DeleteByID(ctx context.Context, id int64) (bool, error)
 
-	// UpdateByID updates the link for given id.
-	UpdateByID(ctx context.Context, id int64, link string) (bool, error)
-
-	LinkByID(ctx context.Context, id int64) (string, error)
-
 	io.Closer
 }

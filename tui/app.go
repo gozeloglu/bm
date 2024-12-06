@@ -27,6 +27,7 @@ type App struct {
 	loggerFile *file.File
 }
 
+// NewApp creates files, folders if not exist and creates database connections.
 func NewApp() *App {
 	f := file.New()
 	logDir, err := f.CreateDir(bmDir, bmLogDir)

@@ -40,7 +40,7 @@ func (s *SQLite3) Open(ctx context.Context, filename string) error {
 	s.logger.Info("opening database")
 	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
-		s.logger.Info("failed to open database ---", "filename", err.Error())
+		s.logger.Error("failed to open database ---", "filename", err.Error())
 		return err
 	}
 	s.db = db
@@ -142,38 +142,6 @@ func (s *SQLite3) DeleteByID(ctx context.Context, id int64) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-func (s *SQLite3) UpdateByID(ctx context.Context, id int64, link string) (bool, error) {
-	res, err := s.db.ExecContext(ctx, "UPDATE links SET link=? WHERE id=?", link, id)
-	if err != nil {
-		s.logger.ErrorContext(ctx, "error updating link", "id", id)
-		return false, err
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		s.logger.ErrorContext(ctx, "error updating link", "id", id)
-		return false, err
-	}
-	if n > 0 {
-		s.logger.InfoContext(ctx, "updated link", "id:", id)
-		return true, nil
-	}
-	return false, nil
-}
-
-func (s *SQLite3) LinkByID(ctx context.Context, id int64) (string, error) {
-	row := s.db.QueryRowContext(ctx, "SELECT link FROM links WHERE id=?", id)
-	if row.Err() != nil {
-		s.logger.ErrorContext(ctx, "error getting link id:", id)
-		return "", row.Err()
-	}
-	var link string
-	if err := row.Scan(&link); err != nil {
-		s.logger.ErrorContext(ctx, "error scanning row")
-		return "", err
-	}
-	return link, nil
 }
 
 // createTables creates the links and categories tables if they do not exist.
