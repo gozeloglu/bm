@@ -39,7 +39,6 @@ func NewApp() *App {
 	}
 	defer f.Close()
 
-	//flag.Parse()
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: logLevel,
