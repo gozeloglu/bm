@@ -10,6 +10,9 @@ You can type the following command.
 go install github.com/gozeloglu/bm@latest
 ```
 
+### Local development build
+
+You can build and run the application with the following command. It can be used for local development tests.
 ```shell
 go build cmd/* &&  go install cmd/bm.go cmd/cmd.go
 ```
@@ -21,38 +24,35 @@ Currently, limited commands are provided.
 ### Save new bookmark
 
 ```shell
-bm --save https://google.com
+bm --save
 ```
+![img_1.png](docs/img/img_1.png)
+
+After saving the link:
+
+![img.png](docs/img/img.png)
 
 ### List all bookmarks
 
 ```shell
-bm --list
+bm
+bm --list # this is another option for listing
 ```
+You can navigate the links with up and down arrow keys.
+
+![img_2.png](docs/img/img_2.png)
+
+Type `/` for searching a specific bookmarked link.
+
+![img_3.png](docs/img/img_3.png)
 
 ### Delete the bookmark
 
 ```shell
-bm --delete 3 # deletes the 3rd bookmark
+bm --delete
 ```
 
-### Update the bookmark link
-
-```shell
-bm --update 3 https://github.com  # updates the 3rd link with new one, github.com in that example
-```
-
-### Open link on the browser
-
-```shell
-bm --open 3 # opens 3rd link on the default browser
-```
-
-### Export links
-
-```shell
-bm --export ~/links/  # exports links to ~/links directory as .db 
-```
+Just use **backspace** to delete.
 
 ### Version
 
