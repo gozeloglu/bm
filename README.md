@@ -14,7 +14,7 @@ go install github.com/gozeloglu/bm@latest
 
 You can build and run the application with the following command. It can be used for local development tests.
 ```shell
-go build cmd/* &&  go install cmd/bm.go cmd/cmd.go
+go build bm.go &&  go install bm.go
 ```
 
 ## Usage
