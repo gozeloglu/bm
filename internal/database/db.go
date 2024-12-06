@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"io"
 )
 
 type Storage interface {
@@ -15,5 +14,5 @@ type Storage interface {
 	// DeleteByID deletes the links by given IDs.
 	DeleteByID(ctx context.Context, id int64) (bool, error)
 
-	io.Closer
+	Close() error
 }
