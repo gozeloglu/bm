@@ -78,7 +78,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		if msg.String() == tea.KeyEnter.String() && !m.deletionEnabled {
-			openBrowser(m.list.SelectedItem().(list.DefaultItem).Description())
+			link := m.list.SelectedItem().(list.DefaultItem).Description()
+			ok := openBrowser(link)
+			if !ok {
+				m.app.Logger.Error("link could not open", "link", link)
+			}
 		}
 		if msg.String() == tea.KeyBackspace.String() && m.deletionEnabled {
 			if len(m.bmList) > 0 {
