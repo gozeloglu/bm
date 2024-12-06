@@ -17,7 +17,7 @@ const (
 	bmDir       = ".bm"
 	bmLogDir    = "log"
 	dbDir       = "db"
-	logLevel    = slog.LevelInfo
+	logLevel    = slog.LevelError
 )
 
 type App struct {
